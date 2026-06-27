@@ -1,0 +1,89 @@
+Must haves:
+User can track which runes appear in a given encounter
+	User should be able to select up to 2 runes
+		In the record output file, multiple runes should show as "rune 1 + rune 2"
+			Single runes should show as "rune"
+			
+User can track currency drop in a given encounter
+	User can select curreny from a drop down using the provided list
+		User can record the quantity of the currency that drop
+		
+User can track socketable Runes for a given encounter
+	User can select a socketable rune from a drop using the provided list
+	
+User can track the layout of a given encounter
+	User can select a layout from a drop down using the provided list
+		Layout should be recorded in the output file as "Layout: {layout name here}"
+		
+Discord:
+User can post results to a discord channel so long as they have the ability to generate the webhook.
+	Inital implementation will be on hitting Submit Encounter. The following will be posted to the discord channel:
+		Encounter #:
+		Layout:		
+		Curreny:
+			order of currency will be:
+				Mirror of Kalandra -"total"
+				Hinekora Lock -"total"
+				Divine -"total"
+				Orb of Annulment -"total"
+				Perfect Chaos -"total"
+				Perfect Exalted -"total"
+				Greater Chaos -"total"
+				Great Exalted -"total"
+				then whatever is left -"total"
+		Socketable Runes:
+			order as it appears in txt file
+		When OCR is implemented, the map properties will sit between Layout and Currency and be in the following format:
+			Item Rarity:
+			Pack Size:
+			Monster Effectiveness
+			Monster Rarity:
+			Waystone Drop Chance:
+			
+Nice to Have:
+A way to group a sets of runs
+	for example, lets say I want to track a set of # runs
+		the user can set up a # of runs
+			when the # is reached
+				a new file is used to track future runs
+				
+A way to aggregate the results of the grouped runs
+	Total Currency dropped, delineated by currency type(ie Total divines, total perfect chaos, etc)
+		Total socketable runes dropped
+		
+A way to track waystone properties
+	For each run, the waystone properties are displayed as part of the output file
+		Nice to have:
+			capture the waystone properties via screenshot or OCR
+			
+Provided lists:
+
+Runes:
+[
+    "Time", "Death", "Opulent", "Cyclonic", "Power", "Moon", "Soul", "Bond",
+    "Prismatic", "Arcane", "Earth", "Fire", "Cold", "Sky", "Stone", "Tidal",
+    "Rage", "Momentum", "Electrocuting", "Bloodletting", "Lightning", "Toxic",
+    "Oath", "Rebirth", "Vision", "Celestial", "Adaptive", "Ward", "Wisdom"
+]
+
+Currency:
+[
+    "Mirror of Kalandra", "Hinekora Lock", "Divine", "Perfect Chaos", "Greater Chaos", "Chaos", "Orb of Annulment", "Perfect Exalted", 
+	"Greater Exalted", "Perfect Regal", "Greater Regal", "Perfect Jeweller", "Orb of Chance", 
+	"Perfect Augmentation", "Perfect Transmutation"
+]
+
+SocketableRunes: 
+[
+	"Cadigans", "Astrids", "Aldur's", "Serles", "Perfect Flux",
+	"Legacy", "Masterwork", "Transcendent", "Celestial"
+]
+
+Layouts:
+[
+	"Frigid Bluffs", "Lush Isle", "Exhumed Ruins", "Bleached Shoals", "Sloughed Gully", "Craggy Pennisula", "Grazed Prairie", "Stagnant Basin", "Scorched Cay"
+]
+
+Waytstone Properties: [
+"Item Rarity", "Pack Size", "Monster Effectiveness", "Monster Rarity", "Waystone Drop Chance"
+]
