@@ -1,13 +1,8 @@
 ﻿#Requires AutoHotkey v2.0
 #SingleInstance Force
 
-; ============================================================
-; POE2 Expedition Tracker
-; Phase 2: Compact GUI
-; ============================================================
-
 AppName := "POE2 Expedition Tracker"
-AppVersion := "0.2.0"
+AppVersion := "0.2.1"
 
 SaveFile := A_ScriptDir "\POE2_Encounter_Log.txt"
 DiscordWebhookUrl := ""
@@ -42,23 +37,11 @@ CreateEncounter() {
         "Layout", "",
         "RemnantRunes", [],
         "SocketableRunes", [],
-        "CurrencyTotals", Map(),
-        "Waystone", Map(
-            "Name", "",
-            "Tier", "",
-            "ItemRarity", "",
-            "MonsterRarity", "",
-            "WaystoneDropChance", "",
-            "RevivesAvailable", ""
-        )
+        "CurrencyTotals", Map()
     )
 }
 
 CurrentEncounter := CreateEncounter()
-
-; ============================================================
-; GUI STATE
-; ============================================================
 
 TrackerGui := ""
 GuiVisible := false
@@ -86,12 +69,7 @@ BuildGui()
 }
 #HotIf
 
-; Optional testing hotkey outside POE:
-; F10::ToggleGui()
-
-; ============================================================
-; GUI
-; ============================================================
+F10::ToggleGui() ; temporary test hotkey
 
 BuildGui() {
     global TrackerGui
@@ -102,46 +80,54 @@ BuildGui() {
     TrackerGui := Gui("+ToolWindow", AppName " v" AppVersion)
     TrackerGui.SetFont("s9", "Segoe UI")
 
+    ; LEFT SIDE - INPUTS
     TrackerGui.Add("Text", "xm ym", "Layout")
-    LayoutList := TrackerGui.Add("ListBox", "xm w180 h90", LayoutOptions)
+    LayoutList := TrackerGui.Add("ListBox", "xm w180 h70", LayoutOptions)
+    setLayoutBtn := TrackerGui.Add("Button", "xm y+4 w100", "Set Layout")
+    setLayoutBtn.OnEvent("Click", OnSetLayout)
 
-    TrackerGui.Add("Text", "xm y+10", "Rune 1")
-    Rune1List := TrackerGui.Add("ListBox", "xm w180 h110", RemnantRuneOptions)
+    ; Rune selectors
+	TrackerGui.Add("Text", "xm y+10", "Rune 1")
+	TrackerGui.Add("Text", "x200 yp", "Rune 2")
 
-    TrackerGui.Add("Text", "x+10 yp", "Rune 2")
-    Rune2List := TrackerGui.Add("ListBox", "w180 h110", RemnantRuneOptions)
+	Rune1List := TrackerGui.Add("ListBox", "xm w175 h95", RemnantRuneOptions)
+	Rune2List := TrackerGui.Add("ListBox", "x200 yp w175 h95", RemnantRuneOptions)
 
-    addRuneBtn := TrackerGui.Add("Button", "xm y+6 w120", "Add Rune Pair")
+    addRuneBtn := TrackerGui.Add("Button", "xm y+5 w120", "Add Rune Pair")
     addRuneBtn.OnEvent("Click", OnAddRunePair)
 
-    TrackerGui.Add("Text", "xm y+12", "Socketable Rune")
-    SocketableList := TrackerGui.Add("ListBox", "xm w180 h90", SocketableRuneOptions)
+    TrackerGui.Add("Text", "xm y+10", "Socketable Rune")
+    SocketableList := TrackerGui.Add("ListBox", "xm w180 h75", SocketableRuneOptions)
 
-    addSocketBtn := TrackerGui.Add("Button", "xm y+6 w120", "Add Socketable")
+    addSocketBtn := TrackerGui.Add("Button", "xm y+5 w120", "Add Socketable")
     addSocketBtn.OnEvent("Click", OnAddSocketable)
 
-    TrackerGui.Add("Text", "xm y+12", "Currency")
-    CurrencyList := TrackerGui.Add("ListBox", "xm w180 h100", CurrencyOptions)
+    TrackerGui.Add("Text", "xm y+10", "Currency")
+    CurrencyList := TrackerGui.Add("ListBox", "xm w180 h85", CurrencyOptions)
 
     TrackerGui.Add("Text", "x+10 yp", "Qty")
-    QuantityEdit := TrackerGui.Add("Edit", "w50 Number", "1")
+	QuantityEdit := TrackerGui.Add("Edit", "w50 Number", "1")
 
-    addCurrencyBtn := TrackerGui.Add("Button", "xm y+6 w120", "Add Currency")
+	addCurrencyBtn := TrackerGui.Add("Button", "xp y+8 w120", "Add Currency")
     addCurrencyBtn.OnEvent("Click", OnAddCurrency)
 
+    ; RIGHT SIDE - SUMMARY
     TrackerGui.Add("Text", "x400 ym", "Current Encounter")
 
     TrackerGui.Add("Text", "x400 y+8", "Layout")
     SummaryLayout := TrackerGui.Add("Text", "x400 y+2 w280 h20", "None")
 
-    TrackerGui.Add("Text", "x400 y+10", "Runes")
-    SummaryRunes := TrackerGui.Add("ListBox", "x400 y+2 w280 h95")
+    TrackerGui.Add("Text", "x400 y+8", "Runes")
+    SummaryRunes := TrackerGui.Add("ListBox", "x400 y+2 w280 h85")
+    SummaryRunes.OnEvent("DoubleClick", OnRemoveRune)
 
-    TrackerGui.Add("Text", "x400 y+10", "Socketable Runes")
-    SummarySocketables := TrackerGui.Add("ListBox", "x400 y+2 w280 h85")
+    TrackerGui.Add("Text", "x400 y+8", "Socketable Runes")
+    SummarySocketables := TrackerGui.Add("ListBox", "x400 y+2 w280 h75")
+    SummarySocketables.OnEvent("DoubleClick", OnRemoveSocketable)
 
-    TrackerGui.Add("Text", "x400 y+10", "Currency")
-    SummaryCurrency := TrackerGui.Add("ListBox", "x400 y+2 w280 h95")
+    TrackerGui.Add("Text", "x400 y+8", "Currency")
+    SummaryCurrency := TrackerGui.Add("ListBox", "x400 y+2 w280 h85")
+    SummaryCurrency.OnEvent("DoubleClick", OnRemoveCurrency)
 
     clearBtn := TrackerGui.Add("Button", "x400 y+12 w100", "Clear")
     clearBtn.OnEvent("Click", OnClear)
@@ -149,7 +135,7 @@ BuildGui() {
     hideBtn := TrackerGui.Add("Button", "x+10 w100", "Hide")
     hideBtn.OnEvent("Click", (*) => HideGui())
 
-    StatusText := TrackerGui.Add("Text", "xm y+12 w650", "Ready")
+    StatusText := TrackerGui.Add("Text", "x400 y+10 w280", "Ready")
 
     TrackerGui.OnEvent("Close", (*) => HideGui())
 
@@ -158,11 +144,7 @@ BuildGui() {
 
 ToggleGui() {
     global GuiVisible
-
-    if GuiVisible
-        HideGui()
-    else
-        ShowGui()
+    GuiVisible ? HideGui() : ShowGui()
 }
 
 ShowGui() {
@@ -177,14 +159,22 @@ ShowGui() {
 
 HideGui() {
     global TrackerGui, GuiVisible
-
     TrackerGui.Hide()
     GuiVisible := false
 }
 
-; ============================================================
-; EVENT HANDLERS
-; ============================================================
+OnSetLayout(*) {
+    global CurrentEncounter, LayoutList
+
+    try {
+        SetEncounterLayout(CurrentEncounter, LayoutList.Text)
+        SetStatus("Layout set.")
+        RefreshUI()
+    } catch as err {
+        SetStatus(err.Message)
+        MsgBox err.Message
+    }
+}
 
 OnAddRunePair(*) {
     global CurrentEncounter, Rune1List, Rune2List
@@ -230,6 +220,47 @@ OnAddCurrency(*) {
     }
 }
 
+OnRemoveRune(*) {
+    global CurrentEncounter, SummaryRunes
+
+    index := SummaryRunes.Value
+    if index <= 0 || CurrentEncounter["RemnantRunes"].Length = 0
+        return
+
+    CurrentEncounter["RemnantRunes"].RemoveAt(index)
+    SetStatus("Rune removed.")
+    RefreshUI()
+}
+
+OnRemoveSocketable(*) {
+    global CurrentEncounter, SummarySocketables
+
+    index := SummarySocketables.Value
+    if index <= 0 || CurrentEncounter["SocketableRunes"].Length = 0
+        return
+
+    CurrentEncounter["SocketableRunes"].RemoveAt(index)
+    SetStatus("Socketable rune removed.")
+    RefreshUI()
+}
+
+OnRemoveCurrency(*) {
+    global CurrentEncounter, SummaryCurrency
+
+    selected := SummaryCurrency.Text
+    if selected = "" || selected = "None"
+        return
+
+    for currency, quantity in CurrentEncounter["CurrencyTotals"] {
+        if selected = quantity " " currency {
+            CurrentEncounter["CurrencyTotals"].Delete(currency)
+            SetStatus("Currency removed.")
+            RefreshUI()
+            return
+        }
+    }
+}
+
 OnClear(*) {
     result := MsgBox("Clear the current encounter?", "Confirm Clear", "YesNo Icon?")
     if result != "Yes"
@@ -252,19 +283,11 @@ ClearInputs() {
     QuantityEdit.Value := "1"
 }
 
-; ============================================================
-; UI REFRESH
-; ============================================================
-
 RefreshUI() {
     global CurrentEncounter
-    global LayoutList, SummaryLayout, SummaryRunes, SummarySocketables, SummaryCurrency
-
-    if LayoutList.Text != ""
-        SetEncounterLayout(CurrentEncounter, LayoutList.Text)
+    global SummaryLayout, SummaryRunes, SummarySocketables, SummaryCurrency
 
     SummaryLayout.Text := ValueOrNone(CurrentEncounter["Layout"])
-
     RefreshListBox(SummaryRunes, CurrentEncounter["RemnantRunes"])
     RefreshListBox(SummarySocketables, CurrentEncounter["SocketableRunes"])
     RefreshCurrencyListBox(SummaryCurrency, CurrentEncounter["CurrencyTotals"])
@@ -303,12 +326,13 @@ SetStatus(message) {
     StatusText.Text := message
 }
 
-; ============================================================
-; ENCOUNTER FUNCTIONS
-; ============================================================
-
 SetEncounterLayout(encounter, layout) {
-    encounter["Layout"] := Trim(layout)
+    layout := Trim(layout)
+
+    if layout = ""
+        throw Error("Please select a layout.")
+
+    encounter["Layout"] := layout
 }
 
 AddRemnantRuneCombo(encounter, rune1, rune2 := "") {
@@ -320,8 +344,6 @@ AddRemnantRuneCombo(encounter, rune1, rune2 := "") {
 
     if rune2 != "" && rune1 = rune2
         throw Error("Rune 1 and Rune 2 cannot be the same.")
-
-    combo := ""
 
     if rune2 = "" {
         combo := rune1
@@ -373,66 +395,6 @@ ClearEncounter() {
     CurrentEncounter := CreateEncounter()
 }
 
-; ============================================================
-; FORMATTER
-; ============================================================
-
-FormatEncounter(encounter, encounterNumber := 1) {
-    text := ""
-
-    text .= "Encounter " encounterNumber "`n"
-    text .= "====================`n"
-    text .= "Layout: " ValueOrNone(encounter["Layout"]) "`n`n"
-
-    text .= "Runes`n"
-    text .= "-----------`n"
-    text .= FormatArrayList(encounter["RemnantRunes"])
-
-    text .= "`nSocketable Runes`n"
-    text .= "----------------`n"
-    text .= FormatArrayList(encounter["SocketableRunes"])
-
-    text .= "`nCurrency`n"
-    text .= "------------`n"
-    text .= FormatCurrencyTotals(encounter["CurrencyTotals"])
-
-    text .= "`n"
-
-    return text
-}
-
-FormatArrayList(items) {
-    if items.Length = 0
-        return "None`n"
-
-    text := ""
-    index := 1
-
-    for item in items {
-        text .= index ". " item "`n"
-        index++
-    }
-
-    return text
-}
-
-FormatCurrencyTotals(currencyTotals) {
-    if currencyTotals.Count = 0
-        return "None`n"
-
-    text := ""
-
-    for currency, quantity in currencyTotals {
-        text .= quantity " " currency "`n"
-    }
-
-    return text
-}
-
-; ============================================================
-; UTILITIES
-; ============================================================
-
 ArrayContains(arr, value) {
     for item in arr {
         if item = value
@@ -456,20 +418,4 @@ SortTwoItemArray(arr) {
 ValueOrNone(value) {
     value := Trim(value)
     return value = "" ? "None" : value
-}
-
-GetNextEncounterNumber(filePath) {
-    if !FileExist(filePath)
-        return 1
-
-    content := FileRead(filePath)
-    count := 0
-    pos := 1
-
-    while pos := RegExMatch(content, "Encounter\s+\d+", &match, pos) {
-        count++
-        pos += StrLen(match[0])
-    }
-
-    return count + 1
 }
