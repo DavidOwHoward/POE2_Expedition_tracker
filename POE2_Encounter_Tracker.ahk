@@ -231,12 +231,19 @@ OnSubmitEncounter(*) {
 
         FileAppend output "`n", logPath, "UTF-8"
 
+        discordResult := SendEncounterToDiscord(output)
+
         ClearEncounter()
         ClearInputs()
         RefreshUI()
 
-        SetStatus("Encounter " encounterNumber " saved.")
-        MsgBox "Encounter " encounterNumber " saved.`n`n" logPath
+        if discordResult = "Skipped" {
+            SetStatus("Encounter " encounterNumber " saved locally.")
+            MsgBox "Encounter " encounterNumber " saved locally.`n`n" logPath
+        } else {
+            SetStatus("Encounter " encounterNumber " saved and posted.")
+            MsgBox "Encounter " encounterNumber " saved and posted to Discord.`n`n" logPath
+        }
     } catch as err {
         SetStatus(err.Message)
         MsgBox err.Message
@@ -529,4 +536,38 @@ SortTwoItemArray(arr) {
 ValueOrNone(value) {
     value := Trim(value)
     return value = "" ? "None" : value
+}
+
+SendEncounterToDiscord(message) {
+    global DiscordWebhookUrl
+
+    webhook := Trim(DiscordWebhookUrl)
+
+    if webhook = ""
+        return "Skipped"
+
+    content := "```" . message . "```"
+    payload := "{""content"":""" JsonEscape(content) """}"
+
+    http := ComObject("WinHttp.WinHttpRequest.5.1")
+    http.Open("POST", webhook, false)
+    http.SetRequestHeader("Content-Type", "application/json")
+    http.Send(payload)
+
+    status := http.Status
+
+    if status < 200 || status >= 300
+        throw Error("Discord webhook failed. HTTP Status: " status)
+
+    return "Posted"
+}
+
+JsonEscape(value) {
+    value := StrReplace(value, "\", "\\")
+    value := StrReplace(value, """", "\""")
+    value := StrReplace(value, "`r", "")
+    value := StrReplace(value, "`n", "\n")
+    value := StrReplace(value, "`t", "\t")
+
+    return value
 }
