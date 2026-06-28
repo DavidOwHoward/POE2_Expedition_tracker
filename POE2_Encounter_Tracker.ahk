@@ -2,9 +2,8 @@
 #SingleInstance Force
 
 AppName := "POE2 Expedition Tracker"
-AppVersion := "0.2.1"
+AppVersion := "0.3.0"
 
-SaveFile := A_ScriptDir "\POE2_Encounter_Log.txt"
 DiscordWebhookUrl := ""
 
 RemnantRuneOptions := [
@@ -80,18 +79,16 @@ BuildGui() {
     TrackerGui := Gui("+ToolWindow", AppName " v" AppVersion)
     TrackerGui.SetFont("s9", "Segoe UI")
 
-    ; LEFT SIDE - INPUTS
     TrackerGui.Add("Text", "xm ym", "Layout")
     LayoutList := TrackerGui.Add("ListBox", "xm w180 h70", LayoutOptions)
     setLayoutBtn := TrackerGui.Add("Button", "xm y+4 w100", "Set Layout")
     setLayoutBtn.OnEvent("Click", OnSetLayout)
 
-    ; Rune selectors
-	TrackerGui.Add("Text", "xm y+10", "Rune 1")
-	TrackerGui.Add("Text", "x200 yp", "Rune 2")
+    TrackerGui.Add("Text", "xm y+10", "Rune 1")
+    TrackerGui.Add("Text", "x200 yp", "Rune 2")
 
-	Rune1List := TrackerGui.Add("ListBox", "xm w175 h95", RemnantRuneOptions)
-	Rune2List := TrackerGui.Add("ListBox", "x200 yp w175 h95", RemnantRuneOptions)
+    Rune1List := TrackerGui.Add("ListBox", "xm w175 h95", RemnantRuneOptions)
+    Rune2List := TrackerGui.Add("ListBox", "x200 yp w175 h95", RemnantRuneOptions)
 
     addRuneBtn := TrackerGui.Add("Button", "xm y+5 w120", "Add Rune Pair")
     addRuneBtn.OnEvent("Click", OnAddRunePair)
@@ -106,12 +103,11 @@ BuildGui() {
     CurrencyList := TrackerGui.Add("ListBox", "xm w180 h85", CurrencyOptions)
 
     TrackerGui.Add("Text", "x+10 yp", "Qty")
-	QuantityEdit := TrackerGui.Add("Edit", "w50 Number", "1")
+    QuantityEdit := TrackerGui.Add("Edit", "w50 Number", "1")
 
-	addCurrencyBtn := TrackerGui.Add("Button", "xp y+8 w120", "Add Currency")
+    addCurrencyBtn := TrackerGui.Add("Button", "xp y+8 w120", "Add Currency")
     addCurrencyBtn.OnEvent("Click", OnAddCurrency)
 
-    ; RIGHT SIDE - SUMMARY
     TrackerGui.Add("Text", "x400 ym", "Current Encounter")
 
     TrackerGui.Add("Text", "x400 y+8", "Layout")
@@ -129,10 +125,13 @@ BuildGui() {
     SummaryCurrency := TrackerGui.Add("ListBox", "x400 y+2 w280 h85")
     SummaryCurrency.OnEvent("DoubleClick", OnRemoveCurrency)
 
-    clearBtn := TrackerGui.Add("Button", "x400 y+12 w100", "Clear")
+    submitBtn := TrackerGui.Add("Button", "x400 y+12 w120", "Submit Encounter")
+    submitBtn.OnEvent("Click", OnSubmitEncounter)
+
+    clearBtn := TrackerGui.Add("Button", "x+10 w80", "Clear")
     clearBtn.OnEvent("Click", OnClear)
 
-    hideBtn := TrackerGui.Add("Button", "x+10 w100", "Hide")
+    hideBtn := TrackerGui.Add("Button", "x+10 w80", "Hide")
     hideBtn.OnEvent("Click", (*) => HideGui())
 
     StatusText := TrackerGui.Add("Text", "x400 y+10 w280", "Ready")
@@ -214,6 +213,30 @@ OnAddCurrency(*) {
         QuantityEdit.Value := "1"
         SetStatus("Currency added.")
         RefreshUI()
+    } catch as err {
+        SetStatus(err.Message)
+        MsgBox err.Message
+    }
+}
+
+OnSubmitEncounter(*) {
+    global CurrentEncounter
+
+    try {
+        ValidateEncounterForSubmit(CurrentEncounter)
+
+        logPath := GetEncounterLogPath()
+        encounterNumber := GetNextEncounterNumber(logPath)
+        output := FormatEncounter(CurrentEncounter, encounterNumber)
+
+        FileAppend output "`n", logPath, "UTF-8"
+
+        ClearEncounter()
+        ClearInputs()
+        RefreshUI()
+
+        SetStatus("Encounter " encounterNumber " saved.")
+        MsgBox "Encounter " encounterNumber " saved.`n`n" logPath
     } catch as err {
         SetStatus(err.Message)
         MsgBox err.Message
@@ -393,6 +416,94 @@ AddCurrency(encounter, currency, quantity) {
 ClearEncounter() {
     global CurrentEncounter
     CurrentEncounter := CreateEncounter()
+}
+
+ValidateEncounterForSubmit(encounter) {
+    if Trim(encounter["Layout"]) = ""
+        throw Error("Please set a layout before submitting.")
+
+    if encounter["RemnantRunes"].Length = 0
+        && encounter["SocketableRunes"].Length = 0
+        && encounter["CurrencyTotals"].Count = 0 {
+        throw Error("Nothing to submit.")
+    }
+}
+
+FormatEncounter(encounter, encounterNumber := 1) {
+    text := ""
+
+    text .= "Encounter " encounterNumber "`n"
+    text .= "====================`n"
+    text .= "Layout: " ValueOrNone(encounter["Layout"]) "`n`n"
+
+    text .= "Runes`n"
+    text .= "-----------`n"
+    text .= FormatArrayList(encounter["RemnantRunes"])
+
+    text .= "`nSocketable Runes`n"
+    text .= "----------------`n"
+    text .= FormatArrayList(encounter["SocketableRunes"])
+
+    text .= "`nCurrency`n"
+    text .= "------------`n"
+    text .= FormatCurrencyTotals(encounter["CurrencyTotals"])
+
+    text .= "`n"
+
+    return text
+}
+
+FormatArrayList(items) {
+    if items.Length = 0
+        return "None`n"
+
+    text := ""
+    index := 1
+
+    for item in items {
+        text .= index ". " item "`n"
+        index++
+    }
+
+    return text
+}
+
+FormatCurrencyTotals(currencyTotals) {
+    if currencyTotals.Count = 0
+        return "None`n"
+
+    text := ""
+
+    for currency, quantity in currencyTotals {
+        text .= quantity " " currency "`n"
+    }
+
+    return text
+}
+
+GetEncounterLogPath() {
+    logDir := A_ScriptDir "\logs"
+
+    if !DirExist(logDir)
+        DirCreate(logDir)
+
+    return logDir "\Encounter_Log_" FormatTime(, "yyyy-MM-dd") ".txt"
+}
+
+GetNextEncounterNumber(filePath) {
+    if !FileExist(filePath)
+        return 1
+
+    content := FileRead(filePath)
+    count := 0
+    pos := 1
+
+    while pos := RegExMatch(content, "Encounter\s+\d+", &match, pos) {
+        count++
+        pos += StrLen(match[0])
+    }
+
+    return count + 1
 }
 
 ArrayContains(arr, value) {
