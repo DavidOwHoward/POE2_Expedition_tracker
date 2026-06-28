@@ -3,3 +3,4 @@ captures/
 *.bak
 .vscode
 *.log
+/logs
